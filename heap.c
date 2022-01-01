@@ -26,6 +26,7 @@ typedef struct HeapNode
 } HeapNode;
 
 HeapNode* heapnode_init(const Heap*, int);
+void heapnode_destruct(HeapNode*);
 int heapnode_getvalue(const HeapNode*);
 void heapnode_setvalue(const HeapNode*, int);
 void heapnode_heapify_down(const HeapNode*);
@@ -36,6 +37,7 @@ HeapNode* heapnode_parent(const HeapNode*);
 HeapNode* heapnode_from_index(const HeapNode*, int);
 void heapnode_try_swap_value(const HeapNode*, const HeapNode*, HeapifyDirection);
 Heap* heap_init(bool, int);
+void heap_destruct(Heap*);
 bool heap_is_out_of_range(const Heap*, int);
 int heap_peek(const Heap*);
 void heap_store(Heap* heap, int num);
@@ -48,6 +50,11 @@ HeapNode* heapnode_init(const Heap* heap, int index)
     node->is_root = index == ROOT_INDEX;
     node->index = index;
     return node;
+}
+
+void heapnode_destruct(HeapNode* node)
+{
+    free(node);
 }
 
 int heapnode_getvalue(const HeapNode* node)
@@ -87,8 +94,8 @@ void heapnode_heapify_down(const HeapNode* node)
         other = left;
     }
     heapnode_try_swap_value(node, other, DOWN);
-    free(left);
-    free(right);
+    heapnode_destruct(left);
+    heapnode_destruct(right);
 }
 
 void heapnode_heapify_up(const HeapNode* node)
@@ -99,7 +106,7 @@ void heapnode_heapify_up(const HeapNode* node)
         return;
     }
     heapnode_try_swap_value(node, parent, UP);
-    free(parent);
+    heapnode_destruct(parent);
 }
 
 HeapNode* heapnode_left(const HeapNode* node)
@@ -175,6 +182,12 @@ Heap* heap_init(bool is_min, int capacity)
     return heap;
 }
 
+void heap_destruct(Heap* heap)
+{
+    free(heap->storage);
+    free(heap);
+}
+
 void heap_store(Heap* heap, int num)
 {
     ++heap->size;
@@ -184,7 +197,7 @@ void heap_store(Heap* heap, int num)
     {
         HeapNode* added = heapnode_init(heap, heap->size);
         heapnode_heapify_up(added);
-        free(added);
+        heapnode_destruct(added);
     }
 }
 
@@ -207,7 +220,7 @@ int heap_take(Heap* heap)
     {
         HeapNode* root_node = heapnode_init(heap, ROOT_INDEX);
         heapnode_heapify_down(root_node);
-        free(root_node);
+        heapnode_destruct(root_node);
     }
     return taken;
 }
@@ -224,5 +237,5 @@ void heap_sort(int* ary, int count)
     {
         ary[i] = heap_take(heap);
     }
-    free(heap);
+    heap_destruct(heap);
 }
