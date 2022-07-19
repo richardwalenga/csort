@@ -214,8 +214,7 @@ int heap_peek(const Heap* heap)
 int heap_take(Heap* heap)
 {
     int taken = heap->storage[ROOT_INDEX];
-    --heap->size;
-    heap->storage[ROOT_INDEX] = heap->storage[heap->size];
+    heap->storage[ROOT_INDEX] = heap->storage[heap->size--];
     if (heap->size > 1)
     {
         HeapNode* root_node = heapnode_init(heap, ROOT_INDEX);
