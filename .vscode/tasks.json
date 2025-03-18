@@ -5,9 +5,14 @@
     "tasks": [
         {
             "label": "build",
-            "type": "shell",
-            "command": "rake",
+            "type": "cmake",
+            "command": "build",
+            "targets": [
+                "ALL_BUILD"
+            ],
             "problemMatcher": [],
+            "detail": "CMake template build task",
+            "dependsOn": "init",
             "group": {
                 "kind": "build",
                 "isDefault": true
@@ -15,13 +20,18 @@
         },
         {
             "label": "clean",
+            "type": "cmake",
+            "command": "clean"
+        },
+        {
+            "label": "init",
             "type": "shell",
-            "command": "rake clean"
+            "command": "mkdir build; cd build; cmake ..",
         },
         {
             "label": "run",
             "type": "shell",
-            "command": "./csort",
+            "command": "./build/csort",
             "dependsOn": "build",
             "problemMatcher": []
         }

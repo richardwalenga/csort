@@ -4,18 +4,26 @@ This code was a way for me to practice writing C code by implementing common sor
 
 ## First Steps
 
-If you don't have Ruby, install it, and then run the following command to make sure Rake is installed:
+This project now requires version 3.10 or greater of the cross-platform build tool CMake. This command, if it returns something, will tell one which versionss .10)It is already installed if this returns something:
 ```
-gem install rake
+cmake --version
 ```
 
-I don't normally program in C and rake can get the job done for the simple needs of this project. I considered using make and may switch this repo to use that build tool at a later date.
+A normal build involves running:
+```
+mkdir build
+cd build
+cmake ..
+cmake --build .
+```
+
+For Visual Studio Code users, there are tasks to build and clean which can only be effective if the [CMake Tools extension is installed](https://github.com/microsoft/vscode-cmake-tools/blob/main/docs/build.md). [Visual Studio users should follow these directions for building](https://learn.microsoft.com/en-us/cpp/build/cmake-projects-in-visual-studio?view=msvc-170).
 
 ## Running
 
 To run it, just execute this:
 ```
-rake default && ./csort
+cd build && ./csort
 ```
 
 For convenience I added a VSCode task called "run" which effectively does the same thing.
