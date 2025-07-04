@@ -4,6 +4,7 @@
 #include "heap.h"
 
 static const int ROOT_INDEX = 1;
+static const int INVALID_INDEX = -1;
 
 typedef enum
 {
@@ -20,7 +21,6 @@ typedef struct Heap
 
 typedef struct HeapNode
 {
-    bool is_root;
     int index;
     const Heap* heap;
 } HeapNode;
@@ -31,36 +31,33 @@ typedef struct OptionalInt
     int value;
 } OptionalInt;
 
-HeapNode* heapnode_init(const Heap*, int);
-void heapnode_destruct(HeapNode*);
+void heapnode_init(HeapNode*, const Heap*, int);
+bool heapnode_exists(const HeapNode*);
 int heapnode_getvalue(const HeapNode*);
 void heapnode_setvalue(const HeapNode*, int);
 void heapnode_heapify_down(const HeapNode*);
 void heapnode_heapify_up(const HeapNode*);
-HeapNode* heapnode_left(const HeapNode*);
-HeapNode* heapnode_right(const HeapNode*);
-HeapNode* heapnode_parent(const HeapNode*);
-HeapNode* heapnode_from_index(const HeapNode*, int);
+HeapNode heapnode_left(const HeapNode*);
+HeapNode heapnode_right(const HeapNode*);
+HeapNode heapnode_parent(const HeapNode*);
+HeapNode heapnode_from_index(const HeapNode*, int);
 void heapnode_try_swap_value(const HeapNode*, const HeapNode*, HeapifyDirection);
-Heap* heap_init(bool, int);
+void heap_init(Heap*, bool, int);
 void heap_destruct(Heap*);
 bool heap_is_out_of_range(const Heap*, int);
 OptionalInt heap_peek(const Heap*);
 void heap_store(Heap* heap, int num);
 OptionalInt heap_take(Heap*);
 
-HeapNode* heapnode_init(const Heap* heap, int index)
+void heapnode_init(HeapNode* node, const Heap* heap, int index)
 {
-    HeapNode* node = malloc(sizeof(HeapNode));
     node->heap = heap;
-    node->is_root = index == ROOT_INDEX;
     node->index = index;
-    return node;
 }
 
-void heapnode_destruct(HeapNode* node)
+bool heapnode_exists(const HeapNode* node)
 {
-    free(node);
+    return node != NULL && node->heap != NULL && node->index != INVALID_INDEX;
 }
 
 int heapnode_getvalue(const HeapNode* node)
@@ -75,79 +72,72 @@ void heapnode_setvalue(const HeapNode* node, int new_val)
 
 void heapnode_heapify_down(const HeapNode* node)
 {
-    HeapNode* left = heapnode_left(node);
-    HeapNode* right = heapnode_right(node);
-    if (left == NULL && right == NULL)
+    HeapNode left = heapnode_left(node);
+    HeapNode right = heapnode_right(node);
+    bool left_exists = heapnode_exists(&left);
+    bool right_exists = heapnode_exists(&right);
+    if (!left_exists && !right_exists)
     {
         return;
     }
 
-    HeapNode* other = right;
-    if (left != NULL && right != NULL)
+    HeapNode* other = &right;
+    if (left_exists && right_exists)
     {
         /* Favor the smallest or largest child node as a swap partner
          * depending on if one is working with a min or max heap.
          * The comparer will return true if the first value meets this
          * criteria. */
         if (node->heap->comparer(
-            heapnode_getvalue(left), heapnode_getvalue(right)))
+            heapnode_getvalue(&left), heapnode_getvalue(&right)))
         {
-            other = left;
+            other = &left;
         }
     }
-    else if (left != NULL)
+    else if (left_exists)
     {
-        other = left;
+        other = &left;
     }
     heapnode_try_swap_value(node, other, DOWN);
-    heapnode_destruct(left);
-    heapnode_destruct(right);
 }
 
 void heapnode_heapify_up(const HeapNode* node)
 {
-    HeapNode* parent = heapnode_parent(node);
-    if (parent == NULL)
-    {
-        return;
-    }
-    heapnode_try_swap_value(node, parent, UP);
-    heapnode_destruct(parent);
+    HeapNode parent = heapnode_parent(node);
+    heapnode_try_swap_value(node, &parent, UP);
 }
 
-HeapNode* heapnode_left(const HeapNode* node)
+HeapNode heapnode_left(const HeapNode* node)
 {
-    return heapnode_from_index(node, 2 * node->index);
+    int new_index = node != NULL ? 2 * node->index : INVALID_INDEX;
+    return heapnode_from_index(node, new_index);
 }
 
-HeapNode* heapnode_right(const HeapNode* node)
+HeapNode heapnode_right(const HeapNode* node)
 {
-    return heapnode_from_index(node, 2 * node->index + 1);
+    int new_index = node != NULL ? 2 * node->index + 1 : INVALID_INDEX;
+    return heapnode_from_index(node, new_index);
 }
 
-HeapNode* heapnode_parent(const HeapNode* node)
+HeapNode heapnode_parent(const HeapNode* node)
 {
-    HeapNode* parent = NULL;
-    if (!node->is_root)
-    {
-        parent = heapnode_init(node->heap, node->index / 2);
-    }
+    int new_index = node == NULL || node->index == ROOT_INDEX ? INVALID_INDEX : (node->index / 2);
+    HeapNode parent;
+    heapnode_init(&parent, node->heap, new_index);
     return parent;
 }
 
-HeapNode* heapnode_from_index(const HeapNode* node, int index)
+HeapNode heapnode_from_index(const HeapNode* node, int index)
 {
-    HeapNode* ret = NULL;
-    if (!heap_is_out_of_range(node->heap, index))
-    {
-        ret = heapnode_init(node->heap, index);
-    }
+    int new_index = node == NULL || heap_is_out_of_range(node->heap, index) ? INVALID_INDEX : index;
+    HeapNode ret;
+    heapnode_init(&ret, node->heap, new_index);
     return ret;
 }
 
 void heapnode_try_swap_value(const HeapNode* node, const HeapNode* other, HeapifyDirection direction)
 {
-    if (node == NULL || other == NULL)
+    if (!heapnode_exists(node) || !heapnode_exists(other))
     {
         return;
     }
@@ -179,19 +169,16 @@ bool max_comparer(int x, int y)
     return x > y;
 }
 
-Heap* heap_init(bool is_min, int capacity)
+void heap_init(Heap* heap, bool is_min, int capacity)
 {
-    Heap* heap = malloc(sizeof(Heap));
     heap->size = 0;
     heap->storage = malloc(sizeof(int) * (capacity+1));
     heap->comparer = is_min ? min_comparer : max_comparer;
-    return heap;
 }
 
 void heap_destruct(Heap* heap)
 {
     free(heap->storage);
-    free(heap);
 }
 
 void heap_store(Heap* heap, int num)
@@ -201,21 +188,21 @@ void heap_store(Heap* heap, int num)
     bool setting_root = heap->size == ROOT_INDEX;
     if (!setting_root)
     {
-        HeapNode* added = heapnode_init(heap, heap->size);
-        heapnode_heapify_up(added);
-        heapnode_destruct(added);
+        HeapNode added;
+        heapnode_init(&added, heap, heap->size);
+        heapnode_heapify_up(&added);
     }
 }
 
 bool heap_is_out_of_range(const Heap* heap, int index)
 {
-    return index > heap->size;
+    return heap == NULL || index > heap->size;
 }
 
 OptionalInt heap_peek(const Heap* heap)
 {
     OptionalInt ret;
-    if (heap->size > 0)
+    if (heap != NULL && heap->size > 0)
     {
 	ret.has_value = true;
 	ret.value = heap->storage[ROOT_INDEX];
@@ -231,26 +218,28 @@ OptionalInt heap_take(Heap* heap)
     heap->storage[ROOT_INDEX] = heap->storage[heap->size--];
     if (heap->size > 1)
     {
-        HeapNode* root_node = heapnode_init(heap, ROOT_INDEX);
-        heapnode_heapify_down(root_node);
-        heapnode_destruct(root_node);
+        HeapNode root_node;
+        heapnode_init(&root_node, heap, ROOT_INDEX);
+        heapnode_heapify_down(&root_node);
     }
     return taken;
 }
 
 void heap_sort(int* ary, int count)
 {
-    Heap* heap = heap_init(true, count);
+    Heap heap;
+    Heap* heap_ptr = &heap;
+    heap_init(heap_ptr, true, count);
     int i = 0;
     for (; i < count; ++i)
     {
-        heap_store(heap, ary[i]);
+        heap_store(heap_ptr, ary[i]);
     }
     for (i = 0; i < count; ++i)
     {
-        OptionalInt taken = heap_take(heap);
+        OptionalInt taken = heap_take(heap_ptr);
         assert(taken.has_value == true);
         ary[i] = taken.value;
     }
-    heap_destruct(heap);
+    heap_destruct(heap_ptr);
 }
