@@ -1,9 +1,9 @@
+#include <assert.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include "heap.h"
 
 static const int ROOT_INDEX = 1;
-static const int NOTHING = -1;
 
 typedef enum
 {
@@ -25,6 +25,12 @@ typedef struct HeapNode
     const Heap* heap;
 } HeapNode;
 
+typedef struct OptionalInt
+{
+    bool has_value;
+    int value;
+} OptionalInt;
+
 HeapNode* heapnode_init(const Heap*, int);
 void heapnode_destruct(HeapNode*);
 int heapnode_getvalue(const HeapNode*);
@@ -39,9 +45,9 @@ void heapnode_try_swap_value(const HeapNode*, const HeapNode*, HeapifyDirection)
 Heap* heap_init(bool, int);
 void heap_destruct(Heap*);
 bool heap_is_out_of_range(const Heap*, int);
-int heap_peek(const Heap*);
+OptionalInt heap_peek(const Heap*);
 void heap_store(Heap* heap, int num);
-int heap_take(Heap*);
+OptionalInt heap_take(Heap*);
 
 HeapNode* heapnode_init(const Heap* heap, int index)
 {
@@ -206,14 +212,22 @@ bool heap_is_out_of_range(const Heap* heap, int index)
     return index > heap->size;
 }
 
-int heap_peek(const Heap* heap)
+OptionalInt heap_peek(const Heap* heap)
 {
-    return (heap->size > 0) ? heap->storage[ROOT_INDEX] : NOTHING;
+    OptionalInt ret;
+    if (heap->size > 0)
+    {
+	ret.has_value = true;
+	ret.value = heap->storage[ROOT_INDEX];
+    }
+    return ret;
 }
 
-int heap_take(Heap* heap)
+OptionalInt heap_take(Heap* heap)
 {
-    int taken = heap->storage[ROOT_INDEX];
+    OptionalInt taken = heap_peek(heap);
+    if (!taken.has_value) return taken;
+
     heap->storage[ROOT_INDEX] = heap->storage[heap->size--];
     if (heap->size > 1)
     {
@@ -234,7 +248,9 @@ void heap_sort(int* ary, int count)
     }
     for (i = 0; i < count; ++i)
     {
-        ary[i] = heap_take(heap);
+        OptionalInt taken = heap_take(heap);
+        assert(taken.has_value == true);
+        ary[i] = taken.value;
     }
     heap_destruct(heap);
 }
